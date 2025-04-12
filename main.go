@@ -103,6 +103,12 @@ func loadConfig(conf *map[string]string) {
 	if err := decoder.Decode(&conf); err != nil {
 		log.Fatal("Error decoding config file:", err)
 	}
+
+	for _, k := range []string{CONF_API_URL, CONF_API_KEY, CONF_COORDINATES} {
+		if _, ok := (*conf)[k]; !ok {
+			log.Fatal("Missing required config key:", k)
+		}
+	}
 }
 
 func main() {
