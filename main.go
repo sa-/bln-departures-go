@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -23,9 +24,7 @@ type GroupedDeparture struct {
 	TimeDiffMins []int
 }
 
-func getData() (table.Model, *hafasClient.DepartureBoard) {
-	stopId := "A=1@O=U Hallesches Tor (Berlin)@X=13391761@Y=52497777@U=86@L=900012103@"
-	departureResp := vbbApi.GetDepartureBoardForStop(stopId)
+func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
 
 	// Get Berlin timezone
 	berlinLoc, err := time.LoadLocation("Europe/Berlin")
@@ -40,7 +39,7 @@ func getData() (table.Model, *hafasClient.DepartureBoard) {
 	// Process departures
 	nameDirectionMap := make(map[string]*GroupedDeparture)
 
-	for _, dep := range *departureResp.Departure {
+	for _, dep := range *departureBoard.Departure {
 		key := dep.Name + "|" + *dep.Direction
 
 		timeDiff := getDiff(now, dep.Time)
@@ -92,13 +91,24 @@ func getData() (table.Model, *hafasClient.DepartureBoard) {
 		})
 	}
 
-	return sortTable(rows, columns), departureResp
+	return sortTable(rows, columns)
+}
+
+func simpleList(departureBoard *hafasClient.DepartureBoard) string {
+	var sb strings.Builder
+	for _, dep := range *departureBoard.Departure {
+		sb.WriteString(fmt.Sprintf("%s  %s  %s  %s\n", dep.Name, *dep.Platform.Text, *dep.Direction, dep.Time))
+	}
+	return sb.String()
 }
 
 func main() {
 	conf.LoadConfig()
-	table, departures := getData()
-	m := model{departures, 20, 20, table}
+
+	stopId := "A=1@O=U Hallesches Tor (Berlin)@X=13391761@Y=52497777@U=86@L=900012103@"
+	appStateDepartureBoard = vbbApi.GetDepartureBoardForStop(stopId)
+	table := makeV1Table(appStateDepartureBoard)
+	m := model{20, 20, 0, table}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
