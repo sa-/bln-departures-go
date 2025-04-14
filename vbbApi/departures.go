@@ -1,4 +1,4 @@
-package main
+package vbbApi
 
 import (
 	"encoding/json"
@@ -6,23 +6,24 @@ import (
 	"net/http"
 	"net/url"
 
+	conf "github.com/sa-/schedule/conf"
 	hafas "github.com/sa-/schedule/hafasClient"
 )
 
 func headers() map[string]string {
 	return map[string]string{
-		"Authorization": "Bearer " + conf[CONF_API_KEY],
+		"Authorization": "Bearer " + conf.Conf.APIKey,
 		"Accept":        "application/json",
 	}
 }
 
 func route(path string) string {
-	base, _ := url.Parse(conf[CONF_API_URL])
+	base, _ := url.Parse(conf.Conf.APIUrl)
 	ref, _ := url.Parse(path)
 	return base.ResolveReference(ref).String()
 }
 
-func getDepartureBoardForStop(stopID string) *hafas.DepartureBoard {
+func GetDepartureBoardForStop(stopID string) *hafas.DepartureBoard {
 	client := &http.Client{}
 
 	// Create request
@@ -53,11 +54,4 @@ func getDepartureBoardForStop(stopID string) *hafas.DepartureBoard {
 	}
 
 	return departureResp
-}
-
-// Define a struct to hold our grouped data
-type GroupedDeparture struct {
-	Name         string
-	Direction    string
-	TimeDiffMins []int
 }

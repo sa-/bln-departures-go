@@ -4,12 +4,18 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	h "github.com/sa-/schedule/hafasClient"
 )
 
 type model struct {
-	table        table.Model
+	// source of truth
+	departures   *h.DepartureBoard
 	windowWidth  int
 	windowHeight int
+
+	// computed
+	table table.Model
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -22,16 +28,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowHeight = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			if m.table.Focused() {
-				m.table.Blur()
-			} else {
-				m.table.Focus()
-			}
-		case "q", "ctrl+c":
+		case "esc", "ctrl+c":
 			return m, tea.Quit
 		case "r":
-			return model{getData(), m.windowWidth, m.windowWidth}, cmd
+			table, departures := getData()
+			return model{departures, m.windowWidth, m.windowWidth, table}, cmd
 		case "enter":
 			return m, tea.Batch(
 				tea.Printf("Let's go to %s!", m.table.SelectedRow()[1]),

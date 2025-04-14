@@ -10,23 +10,14 @@ import (
 )
 
 func intsToStringLimited(nums []int, limit int) string {
-	// Determine the actual number of items to process
-	count := len(nums)
-	if count > limit {
-		count = limit // Cap the count at the specified limit
-	}
-
-	// Handle the edge case of an empty slice or zero limit gracefully
+	count := min(len(nums), limit)
 	if count <= 0 {
 		return ""
 	}
 
-	// Use strings.Builder for efficient string building
 	var sb strings.Builder
 
-	// Iterate up to 'count' items
-	for i := 0; i < count; i++ {
-		// Append the integer converted to a string
+	for i := range count {
 		sb.WriteString(strconv.Itoa(nums[i]))
 
 		// Add a comma and space separator if it's not the last item
@@ -53,7 +44,7 @@ func getDiff(now time.Time, departureTimeStr string) int {
 	)
 
 	// If the departure time is earlier than now, it's for tomorrow
-	if depTime.Before(now) {
+	if depTime.Sub(now).Minutes() < -60 {
 		depTime = depTime.Add(24 * time.Hour)
 	}
 
@@ -87,4 +78,11 @@ func sortTable(rows []table.Row, columns []table.Column) table.Model {
 	)
 
 	return t
+}
+
+func padOrTruncate(s string, length int) string {
+	if len(s) > length {
+		return s[:length-1] + "…"
+	}
+	return s + strings.Repeat(" ", length-len(s))
 }
