@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	APIUrl      string `json:"HAFAS_API_URL"`
-	APIKey      string `json:"HAFAS_API_KEY"`
-	Coordinates string `json:"COORDINATES"`
+	VbbApiUrl         string `json:"HAFAS_API_URL"`
+	VbbAPIKey         string `json:"HAFAS_API_KEY"`
+	MeteosourceApiKey string `json:"METEOSOURCE_API_KEY"`
+	Coordinates       string `json:"COORDINATES"`
 }
 
 var Conf Config
@@ -29,7 +30,7 @@ func LoadConfig() {
 		log.Fatal("Error decoding config file:", err)
 	}
 
-	if Conf.APIUrl == "" || Conf.APIKey == "" || Conf.Coordinates == "" {
+	if Conf.VbbApiUrl == "" || Conf.VbbAPIKey == "" || Conf.Coordinates == "" {
 		log.Fatal("Missing required config keys")
 	}
 }

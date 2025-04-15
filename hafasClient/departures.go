@@ -1,4 +1,4 @@
-package vbbApi
+package hafasClient
 
 import (
 	"encoding/json"
@@ -7,23 +7,22 @@ import (
 	"net/url"
 
 	conf "github.com/sa-/schedule/conf"
-	hafas "github.com/sa-/schedule/hafasClient"
 )
 
 func headers() map[string]string {
 	return map[string]string{
-		"Authorization": "Bearer " + conf.Conf.APIKey,
+		"Authorization": "Bearer " + conf.Conf.VbbAPIKey,
 		"Accept":        "application/json",
 	}
 }
 
 func route(path string) string {
-	base, _ := url.Parse(conf.Conf.APIUrl)
+	base, _ := url.Parse(conf.Conf.VbbApiUrl)
 	ref, _ := url.Parse(path)
 	return base.ResolveReference(ref).String()
 }
 
-func GetDepartureBoardForStop(stopID string) *hafas.DepartureBoard {
+func GetDepartureBoardForStop(stopID string) *DepartureBoard {
 	client := &http.Client{}
 
 	// Create request
@@ -48,7 +47,7 @@ func GetDepartureBoardForStop(stopID string) *hafas.DepartureBoard {
 		log.Fatal("Error sending request:", err)
 	}
 	defer resp.Body.Close()
-	var departureResp *hafas.DepartureBoard
+	var departureResp *DepartureBoard
 	if err := json.NewDecoder(resp.Body).Decode(&departureResp); err != nil {
 		log.Fatal("Error decoding response:", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -21,7 +22,9 @@ type model struct {
 	displayMode  int
 
 	// computed
-	table table.Model
+	departureTable table.Model
+	hourlyViewport viewport.Model
+	dailyViewport  viewport.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -34,33 +37,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.windowWidth = msg.Width
 		m.windowHeight = msg.Height
+		m.hourlyViewport.Width = 20
+		m.hourlyViewport.Height = msg.Height
+		m.dailyViewport.Width = 50
+		m.dailyViewport.Height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
-		case tea.KeyRight.String():
+		case tea.KeyTab.String():
 			m.displayMode = (m.displayMode + 1) % displayModeCount
-		case tea.KeyLeft.String():
-			m.displayMode = (m.displayMode - 1 + displayModeCount) % displayModeCount
 		case "esc", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
 			return m, tea.Batch(
-				tea.Printf("Let's go to %s!", m.table.SelectedRow()[1]),
+				tea.Printf("Let's go to %s!", m.departureTable.SelectedRow()[1]),
 			)
 		}
 	}
-	m.table, cmd = m.table.Update(msg)
+	m.departureTable, cmd = m.departureTable.Update(msg)
+	m.hourlyViewport, cmd = m.hourlyViewport.Update(msg)
+	m.dailyViewport, cmd = m.dailyViewport.Update(msg)
 	return m, cmd
 }
 
 func (m model) View() string {
 	windowStyle := lipgloss.NewStyle().Width(m.windowWidth).Height(m.windowHeight).Align(lipgloss.Center)
-	renderedTable := m.table.View()
+
 	switch m.displayMode {
 	case 0:
-		return windowStyle.Render(renderedTable)
-	case 1:
-		content := lipgloss.NewStyle().Align(lipgloss.Left).Render(simpleList(appStateDepartureBoard))
+		content := lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			m.departureTable.View(),
+			m.hourlyViewport.View(),
+			m.dailyViewport.View(),
+		)
 		return windowStyle.Render(content)
+	case 1:
+
+		return windowStyle.Render("N/A")
 	}
 	return windowStyle.Render("Invalid display mode: " + strconv.Itoa(m.displayMode))
 }

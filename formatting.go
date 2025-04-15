@@ -73,10 +73,10 @@ func sortTable(rows []table.Row, columns []table.Column) table.Model {
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
-		table.WithFocused(true),
+		table.WithFocused(false),
 		table.WithHeight(20),
 	)
-
+	t.SetCursor(-1)
 	return t
 }
 

@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+
+package: meteoSource
+output: meteoSource/models.gen.go
+generate:
+  echo-server: false
+  client: false
+  models: true
+  embedded-spec: false
