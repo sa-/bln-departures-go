@@ -2,5 +2,6 @@
     "HAFAS_API_URL": "https://vbb.demo.hafas.de/fahrinfo/restproxy/latest/",
     "HAFAS_API_KEY": "asdf-cafe-f00d-214f1rf",
     "METEOSOURCE_API_KEY": "asdf-cafe-f00d-214f1rf",
-    "COORDINATES": "52.510346587426845, 13.389906478495345"
+    "LATITUDE": "52.510346587426845",
+    "LONGITUDE": "13.389906478495345"
 }

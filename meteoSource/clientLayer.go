@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/sa-/schedule/conf"
 )
@@ -31,10 +30,9 @@ func GetResponse() *PointPointData {
 	req.Header.Add("Content-Type", "application/json")
 
 	// Add query parameters
-	coords := strings.Split(conf.Conf.Coordinates, ",")
 	q := req.URL.Query()
-	q.Add("lat", coords[0])
-	q.Add("lon", coords[1])
+	q.Add("lat", conf.Conf.Latitude)
+	q.Add("lon", conf.Conf.Longitude)
 	q.Add("key", conf.Conf.MeteosourceApiKey)
 	q.Add("sections", "all")
 	req.URL.RawQuery = q.Encode()

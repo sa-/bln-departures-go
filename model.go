@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -25,6 +26,8 @@ type model struct {
 	departureTable table.Model
 	hourlyViewport viewport.Model
 	dailyViewport  viewport.Model
+
+	altViewport viewport.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -41,6 +44,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.hourlyViewport.Height = msg.Height
 		m.dailyViewport.Width = 50
 		m.dailyViewport.Height = msg.Height
+		m.altViewport.Width = msg.Width
+		m.altViewport.Height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
 		case tea.KeyTab.String():
@@ -53,9 +58,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 	}
-	m.departureTable, cmd = m.departureTable.Update(msg)
-	m.hourlyViewport, cmd = m.hourlyViewport.Update(msg)
-	m.dailyViewport, cmd = m.dailyViewport.Update(msg)
+	if m.displayMode == 0 {
+		m.departureTable, cmd = m.departureTable.Update(msg)
+		m.hourlyViewport, cmd = m.hourlyViewport.Update(msg)
+		m.dailyViewport, cmd = m.dailyViewport.Update(msg)
+	} else if m.displayMode == 1 {
+		m.altViewport, cmd = m.altViewport.Update(msg)
+	}
 	return m, cmd
 }
 
@@ -67,13 +76,13 @@ func (m model) View() string {
 		content := lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			m.departureTable.View(),
+			strings.Repeat(" | \n", m.windowHeight),
 			m.hourlyViewport.View(),
 			m.dailyViewport.View(),
 		)
 		return windowStyle.Render(content)
 	case 1:
-
-		return windowStyle.Render("N/A")
+		return windowStyle.Render(m.altViewport.View())
 	}
 	return windowStyle.Render("Invalid display mode: " + strconv.Itoa(m.displayMode))
 }

@@ -2,6 +2,7 @@ package hafasClient
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -22,8 +23,9 @@ func route(path string) string {
 	return base.ResolveReference(ref).String()
 }
 
+var client = &http.Client{}
+
 func GetDepartureBoardForStop(stopID string) *DepartureBoard {
-	client := &http.Client{}
 
 	// Create request
 	req, err := http.NewRequest("GET", route("departureBoard"), nil)
@@ -53,4 +55,44 @@ func GetDepartureBoardForStop(stopID string) *DepartureBoard {
 	}
 
 	return departureResp
+}
+
+func GetStationsNearCoordinates() *LocationList {
+
+	// Create request
+	req, err := http.NewRequest("GET", route("location.nearbystops"), nil)
+	if err != nil {
+		log.Fatal("Error creating request:", err)
+	}
+
+	// Add headers
+	for key, value := range headers() {
+		req.Header.Add(key, value)
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	q.Add("originCoordLat", conf.Conf.Latitude)
+	q.Add("originCoordLong", conf.Conf.Longitude)
+	q.Add("accessId", conf.Conf.VbbAPIKey)
+	req.URL.RawQuery = q.Encode()
+
+	// Send request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal("Error sending request:", err)
+	}
+	defer resp.Body.Close()
+
+	var bodyBytes []byte
+	bodyBytes, err = io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+	var stationsResp *LocationList
+	if err := json.Unmarshal(bodyBytes, &stationsResp); err != nil {
+		log.Printf("Error decoding response: %s", err)
+	}
+
+	return stationsResp
 }

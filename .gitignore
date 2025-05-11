@@ -1,3 +1,4 @@
 bin/
 .conf.json
 .scratch/
+.DS_Store
