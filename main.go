@@ -21,13 +21,14 @@ import (
 
 // Define a struct to hold our grouped data
 type GroupedDeparture struct {
+	StopName     string
 	Name         string
 	Direction    string
 	Platform     string
 	TimeDiffMins []int
 }
 
-func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
+func makeV1Table(departures *[]hafasClient.Departure) table.Model {
 	// Get Berlin timezone
 	berlinLoc, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
@@ -41,8 +42,8 @@ func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
 	// Process departures
 	nameDirectionMap := make(map[string]*GroupedDeparture)
 
-	for _, dep := range *departureBoard.Departure {
-		key := dep.Name + "|" + *dep.Direction
+	for _, dep := range *departures {
+		key := dep.Name + "|" + dep.Direction
 
 		timeDiff := getDiff(now, dep.Time)
 
@@ -50,9 +51,10 @@ func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
 			group.TimeDiffMins = append(group.TimeDiffMins, timeDiff)
 		} else {
 			nameDirectionMap[key] = &GroupedDeparture{
+				StopName:     dep.StopName,
 				Name:         dep.Name,
-				Direction:    *dep.Direction,
-				Platform:     *dep.Platform.Text,
+				Direction:    dep.Direction,
+				Platform:     dep.Platform,
 				TimeDiffMins: []int{timeDiff},
 			}
 		}
@@ -62,7 +64,7 @@ func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
 	for _, group := range nameDirectionMap {
 		sort.Ints(group.TimeDiffMins)
 
-		// Deduplicate times (equivalent to 'unique' in pandas)
+		// Deduplicate times
 		if len(group.TimeDiffMins) > 1 {
 			uniqueTimes := []int{group.TimeDiffMins[0]}
 			for i := 1; i < len(group.TimeDiffMins); i++ {
@@ -85,7 +87,7 @@ func makeV1Table(departureBoard *hafasClient.DepartureBoard) table.Model {
 	rows := []table.Row{}
 	for _, group := range nameDirectionMap {
 		rows = append(rows, table.Row{
-			"U Hallesches Tor",
+			group.StopName,
 			group.Name,
 			group.Platform,
 			group.Direction,
@@ -151,34 +153,25 @@ func makeWeather(weatherData *ms.PointPointData) (viewport.Model, viewport.Model
 	return hourlyVp, dailyVp
 }
 
-type NearbyStop struct {
-	Name     string
-	Id       string
-	Distance int
-}
-
 func main() {
 	conf.LoadConfig()
 
-	stopId := "A=1@O=U Hallesches Tor (Berlin)@X=13391761@Y=52497777@U=86@L=900012103@"
-	appStateDepartureBoard = hafasClient.GetDepartureBoardForStop(stopId)
+	// Nearby stops
+	locs := hafasClient.GetStationsNearCoordinates()
+	stops := strings.Builder{}
+	for _, l := range *locs {
+		stops.WriteString(fmt.Sprintf("Name: %s\tDist: %d\tId: %s", l.Name, l.Distance, l.Id) + "\n")
+	}
 
-	departureTable := makeV1Table(appStateDepartureBoard)
+	departures := make([]hafasClient.Departure, 0)
+	for _, s := range *locs {
+		departures = append(departures, hafasClient.GetDeparturesForStop(s.Id, s.Name)...)
+	}
+
+	departureTable := makeV1Table(&departures)
 
 	weatherData := ms.GetResponse()
 	hourlyVp, dailyVp := makeWeather(weatherData)
-
-	locs := hafasClient.GetStationsNearCoordinates()
-	stops := strings.Builder{}
-	for _, l := range *locs.StopLocationOrCoordLocation {
-		s := l["StopLocation"].(map[string]interface{})
-		ns := NearbyStop{
-			Name:     s["name"].(string),
-			Id:       s["id"].(string),
-			Distance: int(s["dist"].(float64)),
-		}
-		stops.WriteString(fmt.Sprintf("Name: %s\tDist: %d\tId: %s", ns.Name, ns.Distance, ns.Id) + "\n")
-	}
 
 	altVp := viewport.New(50, 20)
 	altVp.SetContent(stops.String())

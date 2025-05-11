@@ -2,30 +2,22 @@ package hafasClient
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
+	"strings"
 
-	conf "github.com/sa-/schedule/conf"
+	hg "github.com/sa-/schedule/hafasClient/gen"
 )
 
-func headers() map[string]string {
-	return map[string]string{
-		"Authorization": "Bearer " + conf.Conf.VbbAPIKey,
-		"Accept":        "application/json",
-	}
+type Departure struct {
+	StopName  string
+	Name      string
+	Direction string
+	Platform  string
+	Time      string
 }
 
-func route(path string) string {
-	base, _ := url.Parse(conf.Conf.VbbApiUrl)
-	ref, _ := url.Parse(path)
-	return base.ResolveReference(ref).String()
-}
-
-var client = &http.Client{}
-
-func GetDepartureBoardForStop(stopID string) *DepartureBoard {
+func getDepartureBoardForStop(stopID string) *hg.DepartureBoard {
 
 	// Create request
 	req, err := http.NewRequest("GET", route("departureBoard"), nil)
@@ -49,7 +41,7 @@ func GetDepartureBoardForStop(stopID string) *DepartureBoard {
 		log.Fatal("Error sending request:", err)
 	}
 	defer resp.Body.Close()
-	var departureResp *DepartureBoard
+	var departureResp *hg.DepartureBoard
 	if err := json.NewDecoder(resp.Body).Decode(&departureResp); err != nil {
 		log.Fatal("Error decoding response:", err)
 	}
@@ -57,42 +49,43 @@ func GetDepartureBoardForStop(stopID string) *DepartureBoard {
 	return departureResp
 }
 
-func GetStationsNearCoordinates() *LocationList {
-
-	// Create request
-	req, err := http.NewRequest("GET", route("location.nearbystops"), nil)
-	if err != nil {
-		log.Fatal("Error creating request:", err)
+func GetDeparturesForStop(stopID, stopName string) []Departure {
+	departureBoard := getDepartureBoardForStop(stopID)
+	if departureBoard == nil {
+		return []Departure{}
 	}
 
-	// Add headers
-	for key, value := range headers() {
-		req.Header.Add(key, value)
+	if departureBoard.Departure == nil {
+		return []Departure{}
 	}
 
-	// Add query parameters
-	q := req.URL.Query()
-	q.Add("originCoordLat", conf.Conf.Latitude)
-	q.Add("originCoordLong", conf.Conf.Longitude)
-	q.Add("accessId", conf.Conf.VbbAPIKey)
-	req.URL.RawQuery = q.Encode()
+	departures := make([]Departure, len(*departureBoard.Departure))
 
-	// Send request
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal("Error sending request:", err)
-	}
-	defer resp.Body.Close()
-
-	var bodyBytes []byte
-	bodyBytes, err = io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal("Error reading response body:", err)
-	}
-	var stationsResp *LocationList
-	if err := json.Unmarshal(bodyBytes, &stationsResp); err != nil {
-		log.Printf("Error decoding response: %s", err)
+	for i, dep := range *departureBoard.Departure {
+		platform := "-"
+		if dep.Platform != nil {
+			platform = *dep.Platform.Text
+		}
+		departures[i] = Departure{
+			StopName:  tuncateParenths(stopName),
+			Name:      dep.Name,
+			Direction: *dep.Direction,
+			Platform:  tuncateParenths(platform),
+			Time:      dep.Time,
+		}
 	}
 
-	return stationsResp
+	return departures
+}
+
+func tuncateParenths(s string) string {
+	// Remove everything after the first parenthesis
+	if i := len(s); i > 2 {
+		for j := i - 1; j >= 0; j-- {
+			if s[j] == '(' {
+				return s[:j]
+			}
+		}
+	}
+	return strings.TrimSpace(s)
 }
